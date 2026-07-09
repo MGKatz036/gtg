@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PRISONER.DILEMMA.BAS</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-phos="green">
+<div id="crt">
+
+  <!-- BOOT -->
+  <div class="screen" id="boot"><span id="bootText"></span><span class="cursor"></span></div>
+
+  <!-- TITLE -->
+  <div class="screen hidden" id="title">
+    <div class="subtitle">GTG SYSTEMS PRESENTS</div>
+    <div id="bigtitle">PRISONER.DILEMMA.BAS</div>
+    <div class="subtitle">A GAME OF TRUST &nbsp;·&nbsp; EST. 1980 &nbsp;·&nbsp; 640K REQUIRED</div>
+    <div class="presskey glow">— PRESS ANY KEY TO BEGIN —</div>
+  </div>
+
+  <!-- MAIN MENU -->
+  <div class="screen hidden" id="menu">
+    <div class="menuHead glow">PRISONER.DILEMMA.BAS — MAIN MENU</div>
+    <div class="menuList">
+      <button id="mQuick"><span class="k">A&gt;</span> QUICK MATCH ............ 1 PLAYER VS MYSTERY DISK</button>
+      <button id="mDuel"><span class="k">B&gt;</span> HEAD TO HEAD ........... 2 PLAYERS, ONE MACHINE</button>
+      <button id="mShelf"><span class="k">C&gt;</span> DISK SHELF ............. YOUR COLLECTION</button>
+      <button id="mBuild"><span class="k">D&gt;</span> STRATEGY LAB ........... WRITE YOUR OWN DISK</button>
+      <button id="mSim"><span class="k">E&gt;</span> BATCH JOB .............. YOUR DISK VS MYSTERY DISK</button>
+      <button id="mPrompt"><span class="k">F&gt;</span> C:\ PROMPT ............. FOR ADVANCED USERS</button>
+      <button id="mTour"><span class="k">G&gt;</span> TOURNAMENT ............. THE 1980 LADDER — 15 RIVALS</button>
+    </div>
+    <div class="menuFoot">
+      PRESS A LETTER OR CLICK · COLLECT ALL <span id="menuTotal">16</span> CLASSIC DISKS BY DEFEATING THEM<br>
+      <span class="cheatTag"></span>
+    </div>
+  </div>
+
+  <!-- QUICK MATCH -->
+  <div class="screen matchScreen hidden" id="match">
+    <div class="hud">
+      <span>ROUND <b id="roundNum">1</b> OF <b id="roundTotal">???</b></span>
+      <span>YOU: <b id="pScore">0</b></span>
+      <span>OPPONENT [<span id="oppName">???</span>]: <b id="cScore">0</b></span>
+      <span class="cheatTag"></span>
+    </div>
+    <div class="histbox">
+      <div class="histrow"><span class="lbl">YOU</span><span id="pHist"></span></div>
+      <div class="histrow"><span class="lbl">THEM</span><span id="cHist"></span></div>
+    </div>
+    <div id="roundMsg" class="roundMsg glow"></div>
+    <div id="oracleMsg" class="oracleMsg"></div>
+    <div class="choices">
+      <button id="coopBtn">[C] COOPERATE</button>
+      <button id="defectBtn" class="badBtn">[D] DEFECT</button>
+    </div>
+    <div class="legend" id="matchLegend"></div>
+  </div>
+
+  <!-- DUEL (2P) -->
+  <div class="screen matchScreen hidden" id="duel">
+    <div class="hud">
+      <span>ROUND <b id="dRound">1</b> OF <b>???</b></span>
+      <span>P1: <b id="d1Score">0</b></span>
+      <span>P2: <b id="d2Score">0</b></span>
+    </div>
+    <div class="histbox">
+      <div class="histrow"><span class="lbl">P1</span><span id="d1Hist"></span></div>
+      <div class="histrow"><span class="lbl">P2</span><span id="d2Hist"></span></div>
+    </div>
+    <div id="duelMsg" class="roundMsg glow"></div>
+    <div class="lockRow"><span id="lock1"></span><span id="lock2"></span></div>
+    <div class="duelGrid">
+      <div class="pLbl">PLAYER 1</div>
+      <div class="pLbl">PLAYER 2</div>
+      <button id="d1c">[A] COOPERATE</button>
+      <button id="d2c">[K] COOPERATE</button>
+      <button id="d1d" class="dBtn">[S] DEFECT</button>
+      <button id="d2d" class="dBtn">[L] DEFECT</button>
+    </div>
+    <div class="legend" id="duelLegend"></div>
+  </div>
+
+  <!-- SIM / BATCH JOB -->
+  <div class="screen hidden" id="sim">
+    <div class="menuHead glow">BATCH JOB — STRATEGY VS STRATEGY</div>
+    <div class="formRow">
+      <label>YOUR DISK:</label>
+      <select id="simDisk"></select>
+      <select id="simLen">
+        <option value="secret">SECRET LENGTH (150–300)</option>
+        <option value="classic">CLASSIC 1980 (200, KNOWN)</option>
+      </select>
+      <button class="smallBtn" id="simRun">[ RUN ]</button>
+    </div>
+    <div class="hud">
+      <span>ROUND <b id="sRound">0</b> <span class="dim" id="simLenLabel"></span></span>
+      <span><span id="simYouName">—</span>: <b id="s1Score">0</b></span>
+      <span>MYSTERY DISK: <b id="s2Score">0</b></span>
+      <span class="cheatTag"></span>
+    </div>
+    <div class="histbox">
+      <div class="histrow"><span class="lbl">YOURS</span><span id="s1Hist"></span></div>
+      <div class="histrow"><span class="lbl">THEIRS</span><span id="s2Hist"></span></div>
+    </div>
+    <div id="simStatus" class="roundMsg glow"></div>
+    <div class="legend" id="simLegend"></div>
+    <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
+  </div>
+
+  <!-- DISK SHELF -->
+  <div class="screen hidden" id="shelf">
+    <div class="shelfHead">
+      <span class="glow">DISK SHELF</span>
+      <b id="shelfCount"></b>
+    </div>
+    <div class="diskGrid" id="classicGrid"></div>
+    <div class="shelfHead"><span class="glow">CUSTOM DISKS</span></div>
+    <div class="diskGrid" id="customGrid"></div>
+    <div class="plaquePanel" id="plaquePanel"><span class="dim">CLICK A DISK TO READ ITS PLAQUE.</span></div>
+    <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
+  </div>
+
+  <!-- STRATEGY LAB -->
+  <div class="screen hidden" id="builder">
+    <div class="menuHead glow">STRATEGY LAB — WRITE A NEW DISK</div>
+    <div class="formRow"><label>DISK LABEL:</label><input type="text" id="bName" maxlength="14" placeholder="MY STRATEGY"></div>
+    <div class="formRow"><label>FIRST MOVE:</label>
+      <select id="bFirst"><option value="C">COOPERATE</option><option value="D">DEFECT</option></select></div>
+    <div class="formRow"><label>WHEN THEY DEFECT:</label>
+      <select id="bRetal">
+        <option value="immediate">RETALIATE IMMEDIATELY</option>
+        <option value="two">RETALIATE AFTER 2 IN A ROW</option>
+        <option value="never">NEVER RETALIATE</option>
+        <option value="grudge">GRUDGE — PUNISH FOREVER</option>
+      </select></div>
+    <div class="formRow"><label>PUNISHMENT LENGTH:</label>
+      <select id="bPunish"><option value="1">1 ROUND</option><option value="2">2 ROUNDS</option><option value="3">3 ROUNDS</option></select></div>
+    <div class="formRow"><label>MERCY (FORGIVE ANYWAY):</label>
+      <select id="bMercy"><option value="0">NEVER</option><option value="0.1">10% OF THE TIME</option><option value="0.33">1 IN 3</option></select></div>
+    <div class="formRow"><label>SNEAK ATTACKS:</label>
+      <select id="bSneak"><option value="0">NEVER</option><option value="0.1">10% OF ROUNDS</option><option value="0.25">25% OF ROUNDS</option></select></div>
+    <div class="formRow"><label>FINAL BETRAYAL:</label>
+      <select id="bEnd">
+        <option value="0">OFF</option>
+        <option value="1">DEFECT LAST ROUND (IF KNOWN)</option>
+        <option value="2">DEFECT LAST 2 (IF KNOWN)</option>
+        <option value="3">DEFECT LAST 3 (IF KNOWN)</option>
+      </select></div>
+    <div class="formRow"><button class="smallBtn" id="writeDisk">[ WRITE DISK ]</button></div>
+    <div class="builderMsg" id="builderMsg"></div>
+    <div class="dim">TIP: FIRST MOVE "COOPERATE" + "RETALIATE IMMEDIATELY" + PUNISHMENT 1 = TIT FOR TAT.</div>
+    <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
+  </div>
+
+  <!-- C:\ PROMPT -->
+  <div class="screen hidden" id="prompt">
+    <pre id="promptOut">DILEMMA DOS 2.4 — TYPE HELP FOR COMMANDS, EXIT TO LEAVE.
+</pre>
+    <div class="promptLine"><span>C:\&gt;</span><input id="promptIn" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
+  </div>
+
+  <!-- STANDINGS -->
+  <div class="screen hidden" id="standings">
+    <pre id="standingsOut"></pre>
+    <div class="btnRow hidden" id="tBtns">
+      <button class="smallBtn" id="tNew">[ NEW TOURNAMENT ]</button>
+      <button class="smallBtn" id="tMenu">[ MENU ]</button>
+    </div>
+  </div>
+
+  <!-- REVEAL -->
+  <div class="screen hidden" id="reveal">
+    <div class="glow" id="revealTop"></div>
+    <div class="floppy" id="revealFloppy">
+      <div class="label"><b id="revName"></b><span id="revYear"></span></div>
+      <div class="hub"></div><div class="notch"></div>
+    </div>
+    <div class="plaque" id="revealPlaque">
+      <div class="who" id="revWho"></div>
+      <div id="revDesc"></div>
+    </div>
+    <div class="unlockNote" id="unlockNote"></div>
+    <div class="verdict" id="verdict"></div>
+    <div class="btnRow">
+      <button id="againBtn">[ AGAIN ]</button>
+      <button id="menuBtn">[ MENU ]</button>
+    </div>
+  </div>
+
+</div>
+<button id="mute">SND: ON</button>
+<script src="strategies.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
