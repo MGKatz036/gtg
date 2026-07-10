@@ -209,4 +209,12 @@ Highly stylized retro UI simulating a 1980s personal computer. Historically reso
 - **Tournament Mode (menu G)** — the full 1980 recreation: you face all 15 real Tournament-1 entrants in shuffled order as mystery opponents, 20 rounds each, length KNOWN (backward-induction drama intended; Stein & Rapoport really does betray the last 2 rounds). The 105 CPU-vs-CPU pairings simulate instantly at the end; final standings print line-by-line on the "GTG SYSTEMS LINE PRINTER" with all 16 entrants ranked and YOU marked. Rank-dependent closing message.
 - Tournament progress persists between sessions (resume from the menu: "MATCH n OF 15"); disks earned in tournament matches count toward the collection.
 
+**v0.4 (July 9, 2026)** — bug fixes, options, tournament revamp, WIN easter egg:
+- **Fix:** Batch Job "RUN AGAIN" now returns to the Batch Job screen instead of running invisibly
+- **Fix:** on-screen "QUIT TO MENU" links on Quick Match and Head to Head (mobile had no ESC key)
+- **Quick Match setup screen:** length SECRET (default) / 20 / 30 / 50 with known endpoint; opponent MYSTERY (default) or any collected/custom disk. Disks collect only on default settings.
+- **Batch Job opponent picker:** MYSTERY (default, collectible) or any collected/custom disk (not collectible)
+- **Tournament revamped:** pick a champion disk (classic or custom); the whole shelf plays round-robin (field grows as you collect). Rules: Classic 200 known / random 150–300 known / random 150–300 secret. Line-printer leaderboard: category champions (points per round, cumulative, victories), Hall of Shame (worst 3 each), OVERALL WINNER (best combined rank, cumulative tiebreak), full standings with "◄ YOUR PICK". The old human-played ladder is gone.
+- **`WIN` easter egg:** typing WIN at C:\ switches to a Windows for Workgroups 3.11 theme (teal desktop, gray windows, blue title bars — menu becomes "Program Manager"). WIN again or GREEN/AMBER/WHITE returns to DOS. Persisted, purely cosmetic.
+
 **Deployed (July 8, 2026):** live at **https://mgkatz036.github.io/gtg/** — public GitHub repo `MGKatz036/gtg`, GitHub Pages serving the `main` branch root. To publish updates: commit changes and `git push` (Pages redeploys automatically in ~1 minute). GitHub CLI installed at `~/.local/bin/gh`, authenticated as MGKatz036.

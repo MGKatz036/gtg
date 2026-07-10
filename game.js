@@ -1,23 +1,28 @@
 "use strict";
 /* =====================================================================
-   PRISONER.DILEMMA.BAS — game shell v0.2
-   Screens: boot → title → menu → { match | duel | sim | shelf | builder | prompt } → reveal
+   PRISONER.DILEMMA.BAS — game shell v0.4
+   Screens: boot → title → menu → { qsetup→match | duel | sim | tsetup→standings
+                                    | shelf | builder | prompt } → reveal
    ===================================================================== */
 const $=id=>document.getElementById(id);
 
 /* ================= SAVE / LOAD ================= */
 const SAVE_KEY="gtg_save_v1";
-let save={ unlocked:[], customs:[], phos:"green", loud:false };
+let save={ unlocked:[], customs:[], phos:"green", ui:"", loud:false };
 function loadSave(){
   try{ const s=JSON.parse(localStorage.getItem(SAVE_KEY)); if(s) save=Object.assign(save,s); }catch(e){}
+  delete save.tourney; // v0.3 ladder-tournament state is obsolete
   STRATEGIES.filter(s=>s.starter).forEach(s=>{ if(!save.unlocked.includes(s.name)) save.unlocked.push(s.name); });
 }
 function persist(){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(save)); }catch(e){} }
-function applyPhos(){ document.body.dataset.phos=save.phos; }
+function applyTheme(){
+  document.body.dataset.phos=save.phos;
+  document.body.classList.toggle("win311",save.ui==="win311");
+}
 
 /* ================= CHEAT STATE (session only) ================= */
-const cheats={ xray:false, oracle:false, turbo:false, rapoport:false, payoffHacked:false };
-let cheatsDirty=false;   // gameplay cheats used → unlocks disabled this session
+const cheats={ xray:false, oracle:false, turbo:false, rapoport:false };
+let cheatsDirty=false;   // gameplay cheats used → disk collecting disabled this session
 function markDirty(){ cheatsDirty=true; refreshCheatTags(); }
 function refreshCheatTags(){
   document.querySelectorAll(".cheatTag").forEach(el=>{
@@ -63,23 +68,24 @@ const sfx={
 
 /* ================= SCREENS ================= */
 let phase="boot";
-const SCREENS=["boot","title","menu","match","duel","sim","shelf","builder","prompt","reveal","standings"];
+const SCREENS=["boot","title","menu","qsetup","match","duel","sim","tsetup","shelf","builder","prompt","reveal","standings"];
 function goto(id){
   SCREENS.forEach(s=>$(s).classList.toggle("hidden",s!==id));
   phase=id;
   if(id==="menu") renderMenu();
+  if(id==="qsetup") renderQSetup();
+  if(id==="tsetup") renderTSetup();
   if(id==="shelf") renderShelf();
   if(id==="sim") renderSimSetup();
   if(id==="prompt") setTimeout(()=>$("promptIn").focus(),50);
 }
-function renderMenu(){
-  $("menuTotal").textContent=STRATEGIES.length;
-  const t=save.tourney;
-  $("mTour").innerHTML='<span class="k">G&gt;</span> '+((t&&t.active)
-    ? (t.idx>=t.order.length
-        ? "RESUME TOURNAMENT ...... FINAL STANDINGS AWAIT"
-        : `RESUME TOURNAMENT ...... MATCH ${t.idx+1} OF ${t.order.length}`)
-    : "TOURNAMENT ............. THE 1980 LADDER — 15 RIVALS");
+function renderMenu(){ $("menuTotal").textContent=STRATEGIES.length; }
+
+/* the shelf, as a list of playable strategy objects (classics collected + customs) */
+function allPlayerDisks(){
+  const classics=STRATEGIES.filter(s=>save.unlocked.includes(s.name));
+  const customs=save.customs.map(customToStrategy);
+  return classics.concat(customs);
 }
 
 /* ================= BOOT ================= */
@@ -119,10 +125,21 @@ async function bootSequence(){
   goto("title");
 }
 
-/* ================= QUICK MATCH (1P) + TOURNAMENT MATCHES ================= */
+/* ================= QUICK MATCH SETUP ================= */
+function renderQSetup(){
+  const opp=$("qOpp");
+  const disks=allPlayerDisks();
+  opp.innerHTML='<option value="">MYSTERY DISK (DEFAULT)</option>'+
+    disks.map(d=>`<option value="${d.name}">${d.custom?"[CUSTOM] ":""}${d.name}</option>`).join("");
+}
+function qsetupStart(){
+  startMatch({ length:$("qLen").value, oppName:$("qOpp").value||null });
+}
+
+/* ================= QUICK MATCH ================= */
 let cpu=null, cpuState={}, pendingCpu=null, ctx=null, totalRounds=0;
 let pMoves=[], cMoves=[], pScore=0, cScore=0, busy=false;
-let matchMode="quick", matchNo=0;
+let matchCollectible=true, lastQuickOpts={};
 
 function mysteryPool(){
   if(cheats.rapoport){
@@ -134,33 +151,29 @@ function mysteryPool(){
 function glyph(m){ return `<span class="m${m}">${m}</span>`; }
 
 function startMatch(opts={}){
-  matchMode=opts.tourney?"tourney":"quick";
-  if(matchMode==="tourney"){
-    const t=save.tourney;
-    cpu=STRATEGIES.find(s=>s.name===t.order[t.idx]);
-    totalRounds=T_ROUNDS;
-    ctx={ known:true, total:totalRounds };
-    matchNo=t.idx+1;
+  lastQuickOpts=opts;
+  const fixedLen=opts.length && opts.length!=="secret";
+  matchCollectible=!fixedLen && !opts.oppName;
+  if(opts.oppName){
+    cpu=allPlayerDisks().find(d=>d.name===opts.oppName) || STRATEGIES[0];
   }else{
     const pool=mysteryPool();
     cpu=pool[Math.floor(Math.random()*pool.length)];
-    totalRounds=15+Math.floor(Math.random()*11);
-    ctx={ known:false, total:totalRounds };
   }
+  totalRounds = fixedLen ? Number(opts.length) : 15+Math.floor(Math.random()*11);
+  ctx={ known:!!fixedLen, total:totalRounds };
   cpuState={}; pendingCpu=null;
   pMoves=[]; cMoves=[]; pScore=0; cScore=0; busy=false;
   $("roundNum").textContent="1";
-  $("roundTotal").textContent = matchMode==="tourney" ? String(totalRounds) : "???";
+  $("roundTotal").textContent = fixedLen ? String(totalRounds) : "???";
   $("pScore").textContent="0"; $("cScore").textContent="0";
   $("pHist").innerHTML=""; $("cHist").innerHTML="";
-  $("oppName").textContent=cheats.xray?cpu.name:"???";
+  $("oppName").textContent = opts.oppName ? cpu.name : (cheats.xray?cpu.name:"???");
   $("matchLegend").innerHTML=legendText()+"<br>"+
-    (matchMode==="tourney"
-      ? `TOURNAMENT MATCH ${matchNo} OF ${save.tourney.order.length} · LENGTH KNOWN: ${totalRounds} ROUNDS. KEYS: C / D · ESC = PAUSE TOURNAMENT`
-      : "MATCH LENGTH IS SECRET. KEYS: C / D · ESC = ABANDON");
-  $("roundMsg").innerHTML = matchMode==="tourney"
-    ? `CHALLENGER ${matchNo} OF ${save.tourney.order.length} HAS CONNECTED.<br>MAKE YOUR CHOICE.`
-    : "A MYSTERY OPPONENT HAS CONNECTED.<br>MAKE YOUR CHOICE.";
+    (fixedLen?`LENGTH KNOWN: ${totalRounds} ROUNDS.`:"MATCH LENGTH IS SECRET.")+
+    " KEYS: C / D"+
+    (matchCollectible?"":" · <span class='cheatTag2'>CUSTOM RULES — NO DISK COLLECTING</span>");
+  $("roundMsg").innerHTML = (opts.oppName?`${cpu.name} HAS CONNECTED.`:"A MYSTERY OPPONENT HAS CONNECTED.")+"<br>MAKE YOUR CHOICE.";
   refreshCheatTags();
   setButtons(true);
   goto("match");
@@ -192,6 +205,7 @@ async function playRound(pMove){
   $("oracleMsg").textContent="";
   sfx[lines[1]]();
   await new Promise(r=>setTimeout(r,900));
+  if(phase!=="match") return;          // player quit mid-round
   if(pMoves.length>=totalRounds){ endQuickMatch(); return; }
   $("roundNum").textContent=pMoves.length+1;
   $("roundMsg").textContent="MAKE YOUR CHOICE.";
@@ -199,30 +213,21 @@ async function playRound(pMove){
   primeCpuMove();
 }
 function endQuickMatch(){
-  if(matchMode==="tourney"){
-    const t=save.tourney;
-    t.results.push({ opp:cpu.name, you:pScore, them:cScore });
-    t.idx++; persist();
-  }
   showReveal({
-    mode:matchMode, opp:cpu, rounds:totalRounds,
+    mode:"quick", opp:cpu, rounds:totalRounds,
     youScore:pScore, oppScore:cScore, youLabel:"YOU", oppLabel:"THEM"
   });
 }
 
 /* ================= REVEAL (quick + sim + duel results) ================= */
-let lastMode="quick", lastSimDisk=null;
+let lastMode="quick";
 function showReveal(r){
   lastMode=r.mode;
   const isDuel=r.mode==="duel";
   $("revealTop").textContent=isDuel
     ? "*** MATCH COMPLETE ***"
-    : r.mode==="tourney"
-      ? `*** TOURNAMENT MATCH ${save.tourney.idx} OF ${save.tourney.order.length} COMPLETE — EJECTING OPPONENT DISK ***`
-      : "*** CONNECTION TERMINATED — EJECTING OPPONENT DISK ***";
-  $("againBtn").textContent =
-    r.mode==="tourney" ? (save.tourney.idx>=save.tourney.order.length ? "[ FINAL STANDINGS ]" : "[ NEXT MATCH ]")
-    : r.mode==="sim" ? "[ RUN AGAIN ]" : "[ AGAIN ]";
+    : "*** CONNECTION TERMINATED — EJECTING OPPONENT DISK ***";
+  $("againBtn").textContent = r.mode==="sim" ? "[ RUN AGAIN ]" : "[ AGAIN ]";
   $("revealFloppy").classList.toggle("hidden",isDuel);
   $("revealPlaque").classList.toggle("hidden",isDuel);
   let unlockLine="";
@@ -231,17 +236,18 @@ function showReveal(r){
     $("revYear").textContent=r.opp.year;
     $("revWho").textContent=r.opp.who;
     $("revDesc").textContent=r.opp.desc;
-    // restart eject animation
     const f=$("revealFloppy"); f.style.animation="none"; void f.offsetWidth; f.style.animation="";
     const par=r.rounds*PAYOFFS.R;
     const pct=Math.round(100*r.youScore/par);
     const earned = r.youScore>=r.oppScore || pct>=85;
-    if(!cheatsDirty && earned && !r.opp.custom && !save.unlocked.includes(r.opp.name)){
+    if(cheatsDirty){
+      unlockLine="(CHEAT MODE — NO DISKS COLLECTED)";
+    }else if(!matchCollectible){
+      unlockLine="(CUSTOM RULES — NO DISK COLLECTED)";
+    }else if(earned && !r.opp.custom && !save.unlocked.includes(r.opp.name)){
       save.unlocked.push(r.opp.name); persist();
       unlockLine=`NEW DISK ADDED TO YOUR SHELF: ${r.opp.name}`;
       setTimeout(()=>sfx.unlock(),1200);
-    } else if(cheatsDirty){
-      unlockLine="(CHEAT MODE — NO DISKS COLLECTED)";
     }
   }
   $("unlockNote").textContent=unlockLine;
@@ -264,92 +270,18 @@ function buildVerdict(r){
   }else{
     html+=`PAR (MUTUAL COOPERATION EVERY ROUND): <b>${par}</b> — ${r.youLabel} SCORED <b>${gy}%</b> OF PAR<br>`+
       `RATING: <b>${grade(gy)}</b>`;
-    if(r.mode==="tourney"){
-      const t=save.tourney;
-      const tot=t.results.reduce((s,x)=>s+x.you,0);
-      html+=`<br>YOUR TOURNAMENT TOTAL: <b>${tot}</b> AFTER ${t.idx} OF ${t.order.length} MATCHES`;
-    }
   }
   return html;
 }
 function revealAgain(){
-  if(lastMode==="quick") startMatch();
-  else if(lastMode==="tourney") tourneyNext();
+  if(lastMode==="quick") startMatch(lastQuickOpts);
   else if(lastMode==="duel") startDuel();
-  else if(lastMode==="sim") runSim();
-}
-
-/* ================= TOURNAMENT ================= */
-const T_ROUNDS=20;
-let standTimer=null;
-function t1Field(){ return STRATEGIES.filter(s=>s.t1); }
-function startTournament(){
-  if(!(save.tourney&&save.tourney.active)){
-    const order=t1Field().map(s=>s.name);
-    for(let i=order.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [order[i],order[j]]=[order[j],order[i]]; }
-    save.tourney={ active:true, order, idx:0, results:[] };
-    persist();
+  else if(lastMode==="sim"){
+    const disk=$("simDisk").value, len=$("simLen").value, opp=$("simOpp").value;
+    goto("sim");                        // bug fix: show the batch job screen again
+    $("simDisk").value=disk; $("simLen").value=len; $("simOpp").value=opp;
+    runSim();
   }
-  tourneyNext();
-}
-function tourneyNext(){
-  const t=save.tourney;
-  if(!t||!t.active){ goto("menu"); return; }
-  if(t.idx>=t.order.length){ showStandings(); return; }
-  startMatch({tourney:true});
-}
-function simPair(A,B,rounds){
-  const stA={}, stB={}, MA=[], MB=[]; let sa=0, sb=0;
-  const c={ known:true, total:rounds };
-  for(let r=0;r<rounds;r++){
-    const a=A.fn(MA.slice(),MB.slice(),stA,c);
-    const b=B.fn(MB.slice(),MA.slice(),stB,c);
-    MA.push(a); MB.push(b);
-    const [pa,pb]=payoff(a,b); sa+=pa; sb+=pb;
-  }
-  return [sa,sb];
-}
-function showStandings(){
-  const t=save.tourney;
-  const field=t1Field();
-  const totals={ "YOU":0 };
-  field.forEach(s=>totals[s.name]=0);
-  t.results.forEach(r=>{ totals["YOU"]+=r.you; totals[r.opp]+=r.them; });
-  for(let i=0;i<field.length;i++) for(let j=i+1;j<field.length;j++){
-    const [sa,sb]=simPair(field[i],field[j],T_ROUNDS);
-    totals[field[i].name]+=sa; totals[field[j].name]+=sb;
-  }
-  const rows=Object.entries(totals).sort((a,b)=>b[1]-a[1]);
-  const youRank=rows.findIndex(r=>r[0]==="YOU")+1;
-  const lines=[
-    "GTG SYSTEMS LINE PRINTER — BATCH JOB #1980",
-    "AXELROD MEMORIAL ROUND-ROBIN — FINAL STANDINGS",
-    `${rows.length} ENTRANTS · ${T_ROUNDS} ROUNDS PER PAIRING · EVERYONE PLAYS EVERYONE`,
-    "=".repeat(52),
-    "RANK  ENTRANT                  POINTS"
-  ];
-  rows.forEach(([name,pts],i)=>{
-    lines.push(`${String(i+1).padStart(3)}.  ${name.padEnd(22)} ${String(pts).padStart(6)}${name==="YOU"?"  ◄ YOU":""}`);
-  });
-  lines.push("=".repeat(52));
-  lines.push( youRank===1 ? "YOU WON THE TOURNAMENT. RAPOPORT WOULD BE PROUD."
-    : youRank<=3 ? "PODIUM FINISH — THE PROFESSORS ARE IMPRESSED."
-    : youRank<=8 ? "MID-TABLE. RESPECTABLE. TIT FOR TAT SMIRKS."
-    : "THE FIELD ATE YOU ALIVE. STUDY THE PLAQUES AND TRY AGAIN.");
-  save.tourney={ active:false }; persist();
-  $("standingsOut").textContent="";
-  $("tBtns").classList.add("hidden");
-  goto("standings");
-  let i=0;
-  standTimer=setInterval(()=>{
-    if(i>=lines.length){
-      clearInterval(standTimer); standTimer=null;
-      $("tBtns").classList.remove("hidden"); sfx.jingle(); return;
-    }
-    $("standingsOut").textContent+=lines[i++]+"\n";
-    sfx.key();
-    $("standingsOut").scrollTop=$("standingsOut").scrollHeight;
-  },140);
 }
 
 /* ================= 2-PLAYER DUEL ================= */
@@ -363,7 +295,7 @@ function startDuel(){
   $("d1Score").textContent="0"; $("d2Score").textContent="0";
   $("d1Hist").innerHTML=""; $("d2Hist").innerHTML="";
   $("duelMsg").innerHTML="MATCH LENGTH IS SECRET.<br>P1: A=COOPERATE S=DEFECT &nbsp;·&nbsp; P2: K=COOPERATE L=DEFECT";
-  $("duelLegend").innerHTML=legendText()+"<br>ESC = ABANDON";
+  $("duelLegend").innerHTML=legendText();
   updateLockRow();
   goto("duel");
 }
@@ -389,6 +321,7 @@ async function resolveDuelRound(){
   $("duelMsg").textContent=`P1 PLAYED ${a} · P2 PLAYED ${b} — P1 +${pa} / P2 +${pb}`;
   sfx[a==="C"&&b==="C"?"coop":"defect"]();
   await new Promise(r=>setTimeout(r,1100));
+  if(phase!=="duel") return;
   if(duel.m1.length>=duel.total){
     showReveal({ mode:"duel", rounds:duel.total,
       youScore:duel.s1, oppScore:duel.s2, youLabel:"P1", oppLabel:"P2" });
@@ -400,19 +333,15 @@ async function resolveDuelRound(){
   updateLockRow();
 }
 
-/* ================= SIMULATION (Mode 2 lite) ================= */
+/* ================= SIMULATION (BATCH JOB) ================= */
 let simTimer=null;
-function allPlayerDisks(){
-  const classics=STRATEGIES.filter(s=>save.unlocked.includes(s.name));
-  const customs=save.customs.map(customToStrategy);
-  return classics.concat(customs);
-}
 function renderSimSetup(){
-  const sel=$("simDisk");
   const disks=allPlayerDisks();
-  sel.innerHTML=disks.map((d,i)=>`<option value="${i}">${d.custom?"[CUSTOM] ":""}${d.name}</option>`).join("");
-  $("simStatus").innerHTML="CHOOSE YOUR DISK AND PRESS RUN.<br><span class='dim'>YOUR STRATEGY WILL FACE A MYSTERY OPPONENT.</span>";
-  $("simLegend").innerHTML=legendText()+"<br>ESC = MENU"+(cheats.turbo?" · <span class='cheatTag'>TURBO</span>":"");
+  const options=disks.map((d,i)=>`<option value="${i}">${d.custom?"[CUSTOM] ":""}${d.name}</option>`).join("");
+  $("simDisk").innerHTML=options;
+  $("simOpp").innerHTML='<option value="mystery">MYSTERY DISK (DEFAULT)</option>'+options;
+  $("simStatus").innerHTML="CHOOSE YOUR DISK AND PRESS RUN.<br><span class='dim'>MYSTERY OPPONENTS CAN BE COLLECTED. CHOSEN OPPONENTS CANNOT.</span>";
+  $("simLegend").innerHTML=legendText()+(cheats.turbo?" · <span class='cheatTag'>TURBO</span>":"");
   $("sRound").textContent="0"; $("s1Score").textContent="0"; $("s2Score").textContent="0";
   $("s1Hist").innerHTML=""; $("s2Hist").innerHTML="";
   $("simYouName").textContent="—"; $("simLenLabel").textContent="";
@@ -422,12 +351,19 @@ function runSim(){
   if(simTimer){ clearInterval(simTimer); simTimer=null; }
   const disks=allPlayerDisks();
   const mine=disks[Number($("simDisk").value)]||disks[0];
-  lastSimDisk=mine;
   const classic=$("simLen").value==="classic";
   const total= classic?200 : 150+Math.floor(Math.random()*151);
   const simCtx={ known:classic, total:total };
-  const pool=mysteryPool().filter(s=>s.name!==mine.name);
-  const opp=pool[Math.floor(Math.random()*pool.length)];
+  const oppChoice=$("simOpp").value;
+  let opp;
+  if(oppChoice==="mystery"){
+    matchCollectible=true;
+    const pool=mysteryPool().filter(s=>s.name!==mine.name);
+    opp=pool[Math.floor(Math.random()*pool.length)];
+  }else{
+    matchCollectible=false;
+    opp=disks[Number(oppChoice)]||disks[0];
+  }
   const stA={}, stB={}, A=[], B=[];
   let sA=0, sB=0;
   $("simYouName").textContent=mine.name;
@@ -440,13 +376,12 @@ function runSim(){
     A.push(a); B.push(b);
     const [pa,pb]=payoff(a,b);
     sA+=pa; sB+=pb;
-    return { a,b };
   };
   const draw=()=>{
     $("sRound").textContent=A.length;
     $("s1Score").textContent=sA; $("s2Score").textContent=sB;
-    $("s1Hist").innerHTML=A.slice(-40).map(m=>glyph(m).replace("<span","<span")).join("");
-    $("s2Hist").innerHTML=B.slice(-40).map(m=>glyph(m)).join("");
+    $("s1Hist").innerHTML=A.slice(-40).map(glyph).join("");
+    $("s2Hist").innerHTML=B.slice(-40).map(glyph).join("");
   };
   const finish=()=>{
     if(simTimer){ clearInterval(simTimer); simTimer=null; }
@@ -465,6 +400,100 @@ function runSim(){
       if(A.length>=total) finish();
     },100);
   }
+}
+
+/* ================= TOURNAMENT (round-robin showdown) ================= */
+let standTimer=null;
+function simPair(A,B,rounds,known=true){
+  const stA={}, stB={}, MA=[], MB=[]; let sa=0, sb=0;
+  const c={ known:known, total:rounds };
+  for(let r=0;r<rounds;r++){
+    const a=A.fn(MA.slice(),MB.slice(),stA,c);
+    const b=B.fn(MB.slice(),MA.slice(),stB,c);
+    MA.push(a); MB.push(b);
+    const [pa,pb]=payoff(a,b); sa+=pa; sb+=pb;
+  }
+  return [sa,sb];
+}
+function renderTSetup(){
+  const disks=allPlayerDisks();
+  $("tDisk").innerHTML=disks.map((d,i)=>`<option value="${i}">${d.custom?"[CUSTOM] ":""}${d.name}</option>`).join("");
+  $("tFieldNote").textContent=`FIELD: ${disks.length} ENTRANTS — EVERY DISK ON YOUR SHELF (CLASSICS + CUSTOMS). COLLECT MORE DISKS TO GROW THE TOURNAMENT.`;
+  refreshCheatTags();
+}
+function runTournament(){
+  const disks=allPlayerDisks();
+  if(disks.length<3){ sfx.err(); $("tFieldNote").textContent="YOU NEED AT LEAST 3 DISKS FOR A TOURNAMENT."; return; }
+  const champ=disks[Number($("tDisk").value)]||disks[0];
+  const rules=$("tRules").value;   // classic | randknown | randsecret
+  const stats=disks.map(d=>({ d, cum:0, rounds:0, wins:0 }));
+  for(let i=0;i<disks.length;i++) for(let j=i+1;j<disks.length;j++){
+    const rounds= rules==="classic" ? 200 : 150+Math.floor(Math.random()*151);
+    const known = rules!=="randsecret";
+    const [sa,sb]=simPair(disks[i],disks[j],rounds,known);
+    stats[i].cum+=sa; stats[j].cum+=sb;
+    stats[i].rounds+=rounds; stats[j].rounds+=rounds;
+    if(sa>sb) stats[i].wins++; else if(sb>sa) stats[j].wins++;
+  }
+  stats.forEach(s=>s.avg=s.cum/s.rounds);
+  const byAvg =[...stats].sort((a,b)=> b.avg-a.avg || b.cum-a.cum);
+  const byCum =[...stats].sort((a,b)=> b.cum-a.cum || b.avg-a.avg);
+  const byWins=[...stats].sort((a,b)=> b.wins-a.wins || b.cum-a.cum);
+  const rankIn=(arr,s)=>arr.indexOf(s);
+  stats.forEach(s=>{ s.overall=rankIn(byAvg,s)+rankIn(byCum,s)+rankIn(byWins,s); });
+  const byOverall=[...stats].sort((a,b)=> a.overall-b.overall || b.cum-a.cum);
+
+  const nm=s=>s.d.name;
+  const rulesLabel= rules==="classic" ? "CLASSIC — 200 ROUNDS, ENDPOINT KNOWN"
+    : rules==="randknown" ? "RANDOM 150–300 ROUNDS, ENDPOINT KNOWN"
+    : "RANDOM 150–300 ROUNDS, ENDPOINT SECRET";
+  const worst=arr=>arr.slice(-3).reverse().map(s=>nm(s)).join(" · ");
+  const lines=[
+    "GTG SYSTEMS LINE PRINTER — TOURNAMENT RESULTS",
+    "ROUND-ROBIN SHOWDOWN — EVERY DISK PLAYS EVERY DISK",
+    `RULES: ${rulesLabel}`,
+    `${disks.length} ENTRANTS · YOUR CHAMPION: ${champ.name}`,
+    "=".repeat(56),
+    "CATEGORY CHAMPIONS",
+    `  POINTS PER ROUND ....... ${nm(byAvg[0])} (${byAvg[0].avg.toFixed(2)})`,
+    `  CUMULATIVE POINTS ...... ${nm(byCum[0])} (${byCum[0].cum})`,
+    `  MOST VICTORIES ......... ${nm(byWins[0])} (${byWins[0].wins} OF ${disks.length-1})`,
+    "",
+    "HALL OF SHAME (WORST 3)",
+    `  POINTS PER ROUND ....... ${worst(byAvg)}`,
+    `  CUMULATIVE POINTS ...... ${worst(byCum)}`,
+    `  VICTORIES .............. ${worst(byWins)}`,
+    "=".repeat(56),
+    `*** OVERALL WINNER: ${nm(byOverall[0])} ***`,
+    "=".repeat(56),
+    "FULL STANDINGS (OVERALL RANK)",
+    "RANK  ENTRANT               AVG/RD   TOTAL  WINS"
+  ];
+  byOverall.forEach((s,i)=>{
+    lines.push(`${String(i+1).padStart(3)}.  ${nm(s).padEnd(20)} ${s.avg.toFixed(2).padStart(6)} ${String(s.cum).padStart(7)} ${String(s.wins).padStart(5)}${s.d===champ?"  ◄ YOUR PICK":""}`);
+  });
+  lines.push("=".repeat(56));
+  const champRank=byOverall.findIndex(s=>s.d===champ)+1;
+  lines.push( champRank===1 ? "YOUR CHAMPION TOOK THE CROWN."
+    : champRank<=3 ? "YOUR CHAMPION MADE THE PODIUM."
+    : champRank<=Math.ceil(disks.length/2) ? "YOUR CHAMPION HELD ITS OWN."
+    : "YOUR CHAMPION GOT CRUNCHED. BACK TO THE STRATEGY LAB.");
+  printStandings(lines);
+}
+function printStandings(lines){
+  $("standingsOut").textContent="";
+  $("tBtns").classList.add("hidden");
+  goto("standings");
+  let i=0;
+  standTimer=setInterval(()=>{
+    if(i>=lines.length){
+      clearInterval(standTimer); standTimer=null;
+      $("tBtns").classList.remove("hidden"); sfx.jingle(); return;
+    }
+    $("standingsOut").textContent+=lines[i++]+"\n";
+    sfx.key();
+    $("standingsOut").scrollTop=$("standingsOut").scrollHeight;
+  },140);
 }
 
 /* ================= DISK SHELF ================= */
@@ -556,10 +585,15 @@ MAGAZINES USED TO PRINT THEM. ASK AROUND.`); sfx.blip(); break;
       promptPrint("VOLUME IN DRIVE A IS STRATEGIES\n"+rows.join("\n")+`\n ${rows.length} FILE(S)`); sfx.blip(); break; }
     case "CLS": $("promptOut").textContent=""; break;
     case "EXIT": sfx.blip(); goto("menu"); break;
-    case "RUN": sfx.boot(); startMatch(); break;
+    case "RUN": sfx.boot(); goto("qsetup"); break;
     case "GREEN": case "AMBER": case "WHITE":
-      save.phos=cmd.toLowerCase(); persist(); applyPhos();
+      save.phos=cmd.toLowerCase(); save.ui=""; persist(); applyTheme();
       promptPrint("CRT PHOSPHOR SET: "+cmd); sfx.blip(); break;
+    case "WIN":
+      save.ui = save.ui==="win311" ? "" : "win311"; persist(); applyTheme();
+      if(save.ui){ promptPrint("STARTING WINDOWS FOR WORKGROUPS 3.11 ...\nPLEASE WAIT."); sfx.jingle(); }
+      else{ promptPrint("EXITING WINDOWS.\nWELCOME BACK TO DOS."); sfx.boot(); }
+      break;
     case "TURBO":
       cheats.turbo=!cheats.turbo;
       promptPrint("TURBO "+(cheats.turbo?"ON — SIMULATIONS RUN INSTANTLY":"OFF")); sfx.blip(); break;
@@ -603,14 +637,14 @@ document.addEventListener("keydown",e=>{
   if(phase==="boot"){ skipBoot=true; return; }
   if(phase==="title"){ sfx.boot(); goto("menu"); return; }
   if(phase==="menu"){
-    const map={a:()=>startMatch(),b:()=>startDuel(),c:()=>goto("shelf"),d:()=>goto("builder"),e:()=>goto("sim"),f:()=>goto("prompt"),g:()=>startTournament()};
+    const map={a:()=>goto("qsetup"),b:()=>startDuel(),c:()=>goto("shelf"),d:()=>goto("builder"),e:()=>goto("sim"),f:()=>goto("prompt"),g:()=>goto("tsetup")};
     if(map[k]){ sfx.blip(); map[k](); }
     return;
   }
   if(k==="escape"){
-    if(["match","duel","sim","shelf","builder","reveal","standings"].includes(phase)){
+    if(["qsetup","match","duel","sim","tsetup","shelf","builder","reveal","standings"].includes(phase)){
       if(simTimer){ clearInterval(simTimer); simTimer=null; }
-      if(standTimer){ clearInterval(standTimer); standTimer=null; }
+      if(standTimer){ clearInterval(standTimer); standTimer=null; $("tBtns").classList.remove("hidden"); }
       sfx.blip(); goto("menu");
     }
     return;
@@ -638,15 +672,18 @@ function wire(){
     muted=!muted; e.target.textContent="SND: "+(muted?"OFF":"ON");
   });
   // menu
-  $("mQuick").addEventListener("click",()=>{ sfx.blip(); startMatch(); });
+  $("mQuick").addEventListener("click",()=>{ sfx.blip(); goto("qsetup"); });
   $("mDuel").addEventListener("click",()=>{ sfx.blip(); startDuel(); });
   $("mShelf").addEventListener("click",()=>{ sfx.blip(); goto("shelf"); });
   $("mBuild").addEventListener("click",()=>{ sfx.blip(); goto("builder"); });
   $("mSim").addEventListener("click",()=>{ sfx.blip(); goto("sim"); });
   $("mPrompt").addEventListener("click",()=>{ sfx.blip(); goto("prompt"); });
-  $("mTour").addEventListener("click",()=>{ sfx.blip(); startTournament(); });
-  // standings
-  $("tNew").addEventListener("click",()=>{ sfx.blip(); startTournament(); });
+  $("mTour").addEventListener("click",()=>{ sfx.blip(); goto("tsetup"); });
+  // quick match setup
+  $("qStart").addEventListener("click",()=>{ sfx.blip(); qsetupStart(); });
+  // tournament setup + standings
+  $("tRun").addEventListener("click",()=>{ sfx.blip(); runTournament(); });
+  $("tNew").addEventListener("click",()=>{ sfx.blip(); goto("tsetup"); });
   $("tMenu").addEventListener("click",()=>{ sfx.blip(); goto("menu"); });
   // match
   $("coopBtn").addEventListener("click",e=>{ e.stopPropagation(); playRound("C"); });
@@ -670,13 +707,14 @@ function wire(){
     else if(e.key==="Escape"){ sfx.blip(); goto("menu"); }
     else sfx.key();
   });
-  // back links
+  // back / quit links
   document.querySelectorAll(".goMenu").forEach(a=>a.addEventListener("click",()=>{
     if(simTimer){ clearInterval(simTimer); simTimer=null; }
+    if(standTimer){ clearInterval(standTimer); standTimer=null; $("tBtns").classList.remove("hidden"); }
     sfx.blip(); goto("menu");
   }));
 }
 
 /* ================= INIT ================= */
-loadSave(); applyPhos();
+loadSave(); applyTheme();
 document.addEventListener("DOMContentLoaded",()=>{ wire(); bootSequence(); });

@@ -13,7 +13,7 @@
   <div class="screen" id="boot"><span id="bootText"></span><span class="cursor"></span></div>
 
   <!-- TITLE -->
-  <div class="screen hidden" id="title">
+  <div class="screen hidden" id="title" data-title="PRISONER.DILEMMA.BAS">
     <div class="subtitle">GTG SYSTEMS PRESENTS</div>
     <div id="bigtitle">PRISONER.DILEMMA.BAS</div>
     <div class="subtitle">A GAME OF TRUST &nbsp;·&nbsp; EST. 1980 &nbsp;·&nbsp; 640K REQUIRED</div>
@@ -21,7 +21,7 @@
   </div>
 
   <!-- MAIN MENU -->
-  <div class="screen hidden" id="menu">
+  <div class="screen hidden" id="menu" data-title="Program Manager">
     <div class="menuHead glow">PRISONER.DILEMMA.BAS — MAIN MENU</div>
     <div class="menuList">
       <button id="mQuick"><span class="k">A&gt;</span> QUICK MATCH ............ 1 PLAYER VS MYSTERY DISK</button>
@@ -30,16 +30,33 @@
       <button id="mBuild"><span class="k">D&gt;</span> STRATEGY LAB ........... WRITE YOUR OWN DISK</button>
       <button id="mSim"><span class="k">E&gt;</span> BATCH JOB .............. YOUR DISK VS MYSTERY DISK</button>
       <button id="mPrompt"><span class="k">F&gt;</span> C:\ PROMPT ............. FOR ADVANCED USERS</button>
-      <button id="mTour"><span class="k">G&gt;</span> TOURNAMENT ............. THE 1980 LADDER — 15 RIVALS</button>
+      <button id="mTour"><span class="k">G&gt;</span> TOURNAMENT ............. ROUND-ROBIN SHOWDOWN</button>
     </div>
     <div class="menuFoot">
-      PRESS A LETTER OR CLICK · COLLECT ALL <span id="menuTotal">16</span> CLASSIC DISKS BY DEFEATING THEM<br>
+      PRESS A LETTER OR CLICK · COLLECT ALL <span id="menuTotal">23</span> CLASSIC DISKS BY DEFEATING THEM<br>
       <span class="cheatTag"></span>
     </div>
   </div>
 
+  <!-- QUICK MATCH SETUP -->
+  <div class="screen hidden" id="qsetup" data-title="Quick Match Setup">
+    <div class="menuHead glow">QUICK MATCH — SETUP</div>
+    <div class="formRow"><label>MATCH LENGTH:</label>
+      <select id="qLen">
+        <option value="secret">SECRET (15–25 ROUNDS) — DEFAULT</option>
+        <option value="20">20 ROUNDS — ENDPOINT KNOWN</option>
+        <option value="30">30 ROUNDS — ENDPOINT KNOWN</option>
+        <option value="50">50 ROUNDS — ENDPOINT KNOWN</option>
+      </select></div>
+    <div class="formRow"><label>OPPONENT:</label>
+      <select id="qOpp"></select></div>
+    <div class="formRow"><button class="smallBtn" id="qStart">[ START MATCH ]</button></div>
+    <div class="dim">DISKS CAN ONLY BE COLLECTED ON DEFAULT SETTINGS (SECRET LENGTH + MYSTERY OPPONENT).</div>
+    <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
+  </div>
+
   <!-- QUICK MATCH -->
-  <div class="screen matchScreen hidden" id="match">
+  <div class="screen matchScreen hidden" id="match" data-title="Quick Match">
     <div class="hud">
       <span>ROUND <b id="roundNum">1</b> OF <b id="roundTotal">???</b></span>
       <span>YOU: <b id="pScore">0</b></span>
@@ -57,10 +74,11 @@
       <button id="defectBtn" class="badBtn">[D] DEFECT</button>
     </div>
     <div class="legend" id="matchLegend"></div>
+    <div class="backHint"><a class="goMenu">&lt; QUIT TO MENU (ESC)</a></div>
   </div>
 
   <!-- DUEL (2P) -->
-  <div class="screen matchScreen hidden" id="duel">
+  <div class="screen matchScreen hidden" id="duel" data-title="Head to Head">
     <div class="hud">
       <span>ROUND <b id="dRound">1</b> OF <b>???</b></span>
       <span>P1: <b id="d1Score">0</b></span>
@@ -81,14 +99,22 @@
       <button id="d2d" class="dBtn">[L] DEFECT</button>
     </div>
     <div class="legend" id="duelLegend"></div>
+    <div class="backHint"><a class="goMenu">&lt; QUIT TO MENU (ESC)</a></div>
   </div>
 
   <!-- SIM / BATCH JOB -->
-  <div class="screen hidden" id="sim">
+  <div class="screen hidden" id="sim" data-title="Batch Job">
     <div class="menuHead glow">BATCH JOB — STRATEGY VS STRATEGY</div>
     <div class="formRow">
       <label>YOUR DISK:</label>
       <select id="simDisk"></select>
+    </div>
+    <div class="formRow">
+      <label>OPPONENT:</label>
+      <select id="simOpp"></select>
+    </div>
+    <div class="formRow">
+      <label>LENGTH:</label>
       <select id="simLen">
         <option value="secret">SECRET LENGTH (150–300)</option>
         <option value="classic">CLASSIC 1980 (200, KNOWN)</option>
@@ -98,7 +124,7 @@
     <div class="hud">
       <span>ROUND <b id="sRound">0</b> <span class="dim" id="simLenLabel"></span></span>
       <span><span id="simYouName">—</span>: <b id="s1Score">0</b></span>
-      <span>MYSTERY DISK: <b id="s2Score">0</b></span>
+      <span>OPPONENT: <b id="s2Score">0</b></span>
       <span class="cheatTag"></span>
     </div>
     <div class="histbox">
@@ -110,8 +136,25 @@
     <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
   </div>
 
+  <!-- TOURNAMENT SETUP -->
+  <div class="screen hidden" id="tsetup" data-title="Tournament Setup">
+    <div class="menuHead glow">TOURNAMENT — ROUND-ROBIN SHOWDOWN</div>
+    <div class="formRow"><label>YOUR CHAMPION:</label>
+      <select id="tDisk"></select></div>
+    <div class="formRow"><label>RULES:</label>
+      <select id="tRules">
+        <option value="classic">CLASSIC — 200 ROUNDS, ENDPOINT KNOWN</option>
+        <option value="randknown">RANDOM 150–300, ENDPOINT KNOWN</option>
+        <option value="randsecret">RANDOM 150–300, ENDPOINT SECRET</option>
+      </select></div>
+    <div class="formRow"><button class="smallBtn" id="tRun">[ RUN TOURNAMENT ]</button></div>
+    <div class="dim" id="tFieldNote"></div>
+    <div class="dim">EVERY DISK PLAYS EVERY DISK. WINNERS CROWNED BY POINTS PER ROUND, CUMULATIVE POINTS, VICTORIES — AND ONE OVERALL CHAMPION.</div>
+    <div class="backHint"><a class="goMenu">&lt; BACK TO MENU (ESC)</a></div>
+  </div>
+
   <!-- DISK SHELF -->
-  <div class="screen hidden" id="shelf">
+  <div class="screen hidden" id="shelf" data-title="File Manager">
     <div class="shelfHead">
       <span class="glow">DISK SHELF</span>
       <b id="shelfCount"></b>
@@ -124,7 +167,7 @@
   </div>
 
   <!-- STRATEGY LAB -->
-  <div class="screen hidden" id="builder">
+  <div class="screen hidden" id="builder" data-title="Strategy Lab">
     <div class="menuHead glow">STRATEGY LAB — WRITE A NEW DISK</div>
     <div class="formRow"><label>DISK LABEL:</label><input type="text" id="bName" maxlength="14" placeholder="MY STRATEGY"></div>
     <div class="formRow"><label>FIRST MOVE:</label>
@@ -156,14 +199,14 @@
   </div>
 
   <!-- C:\ PROMPT -->
-  <div class="screen hidden" id="prompt">
+  <div class="screen hidden" id="prompt" data-title="MS-DOS Prompt">
     <pre id="promptOut">DILEMMA DOS 2.4 — TYPE HELP FOR COMMANDS, EXIT TO LEAVE.
 </pre>
     <div class="promptLine"><span>C:\&gt;</span><input id="promptIn" autocomplete="off" autocapitalize="characters" spellcheck="false"></div>
   </div>
 
   <!-- STANDINGS -->
-  <div class="screen hidden" id="standings">
+  <div class="screen hidden" id="standings" data-title="Print Manager">
     <pre id="standingsOut"></pre>
     <div class="btnRow hidden" id="tBtns">
       <button class="smallBtn" id="tNew">[ NEW TOURNAMENT ]</button>
@@ -172,7 +215,7 @@
   </div>
 
   <!-- REVEAL -->
-  <div class="screen hidden" id="reveal">
+  <div class="screen hidden" id="reveal" data-title="Match Results">
     <div class="glow" id="revealTop"></div>
     <div class="floppy" id="revealFloppy">
       <div class="label"><b id="revName"></b><span id="revYear"></span></div>

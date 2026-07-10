@@ -81,7 +81,7 @@ button{ font-family:inherit; }
 .hud{ display:flex; justify-content:space-between; flex-wrap:wrap; gap:1em;
       border:2px solid var(--phos-dim); padding:.5em .8em; }
 .hud b{ color:var(--phos-bright); }
-.cheatTag{ color:var(--bad); }
+.cheatTag, .cheatTag2{ color:var(--bad); }
 .histbox{ border:2px solid var(--phos-dim); padding:.5em .8em; overflow-x:auto; }
 .histrow{ white-space:nowrap; letter-spacing:.35em; }
 .histrow .lbl{ display:inline-block; width:4.2em; letter-spacing:normal; color:var(--phos-dim); }
@@ -214,3 +214,96 @@ button{ font-family:inherit; }
   .choices button{ width:100%; }
   .formRow label{ width:100%; }
 }
+
+/* =====================================================================
+   WIN — the Windows for Workgroups 3.11 easter egg theme
+   (type WIN at the C:\ prompt)
+   ===================================================================== */
+body.win311{ background:#008080; }
+body.win311 #crt{
+  background:#008080; animation:none; padding:3vh 3vw;
+  display:flex; flex-direction:column;
+}
+body.win311 #crt::after, body.win311 #crt::before{ display:none; }
+
+body.win311 .screen{
+  background:#c0c0c0; color:#000;
+  border:2px solid; border-color:#dfdfdf #404040 #404040 #dfdfdf;
+  box-shadow:1px 1px 0 #000, 4px 4px 8px rgba(0,0,0,.35);
+  padding:0 14px 14px 14px;
+}
+body.win311 .screen::before{
+  content:"▣  " attr(data-title);
+  display:block;
+  background:linear-gradient(90deg,#000080,#1084d0);
+  color:#fff; font-weight:bold; font-size:.85em;
+  padding:5px 10px; margin:0 -14px 14px -14px;
+}
+body.win311 #boot{ background:#000; color:#c0c0c0; border:none; box-shadow:none; padding:4vh 4vw; }
+body.win311 #boot::before{ display:none; }
+
+body.win311 .screen, body.win311 button, body.win311 select, body.win311 input{
+  font-family:Tahoma, Geneva, Verdana, sans-serif;
+}
+body.win311 .glow, body.win311 #bigtitle{ text-shadow:none; }
+body.win311 #bigtitle{ color:#000080; }
+body.win311 .subtitle, body.win311 .dim, body.win311 .menuFoot, body.win311 .legend,
+body.win311 .plaque .who, body.win311 .histrow .lbl, body.win311 .duelGrid .pLbl{ color:#555; }
+body.win311 .presskey{ color:#000; }
+body.win311 .menuHead, body.win311 .shelfHead{ color:#000; border-color:#808080; }
+body.win311 .hud b, body.win311 .verdict b, body.win311 .shelfHead b,
+body.win311 .unlockNote, body.win311 .builderMsg, body.win311 .lockRow .locked{ color:#000080; }
+body.win311 .mC{ color:#008000; }
+body.win311 .mD{ color:#c00000; }
+body.win311 .cheatTag, body.win311 .cheatTag2, body.win311 .oracleMsg{ color:#c00000; }
+
+body.win311 .hud, body.win311 .histbox, body.win311 .plaque, body.win311 .plaquePanel,
+body.win311 .lockRow{
+  background:#fff; border:2px solid; border-color:#808080 #fff #fff #808080;
+}
+body.win311 #standingsOut{
+  background:#fff; border:2px solid; border-color:#808080 #fff #fff #808080; padding:10px;
+}
+body.win311 #prompt{ background:#000; }
+body.win311 #prompt::before{ margin-bottom:0; }
+body.win311 #promptOut, body.win311 .promptLine, body.win311 #promptIn{
+  color:#c0c0c0; font-family:"Courier New",Courier,monospace;
+}
+body.win311 #promptOut{ padding-top:10px; }
+
+body.win311 .choices button, body.win311 .btn, body.win311 .smallBtn,
+body.win311 #reveal button, body.win311 .duelGrid button, body.win311 #mute{
+  background:#c0c0c0; color:#000; text-shadow:none;
+  border:2px solid; border-color:#fff #404040 #404040 #fff;
+  box-shadow:1px 1px 0 #000;
+}
+body.win311 .choices button:hover:not(:disabled), body.win311 .smallBtn:hover,
+body.win311 #reveal button:hover, body.win311 .btn:hover{
+  background:#d4d4d4; color:#000;
+}
+body.win311 .choices button:active, body.win311 .smallBtn:active,
+body.win311 #reveal button:active{
+  border-color:#404040 #fff #fff #404040; box-shadow:none;
+}
+body.win311 .badBtn, body.win311 .duelGrid button.dBtn{
+  color:#c00000 !important; border-color:#fff #404040 #404040 #fff !important;
+}
+body.win311 .badBtn:hover:not(:disabled){ background:#d4d4d4 !important; color:#c00000 !important; }
+
+body.win311 .menuList button{
+  color:#000; padding:.35em .5em;
+}
+body.win311 .menuList button:hover, body.win311 .menuList button:focus{
+  background:#000080; color:#fff;
+}
+body.win311 .menuList .k{ color:inherit; font-weight:bold; }
+
+body.win311 select, body.win311 input[type=text]{
+  background:#fff; color:#000;
+  border:2px solid; border-color:#808080 #fff #fff #808080;
+}
+body.win311 .formRow label{ color:#000; }
+body.win311 .backHint a, body.win311 .legend a{ color:#000080; }
+body.win311 .mini{ border:2px solid; border-color:#fff #404040 #404040 #fff; }
+body.win311 .mini.locked .lbl{ background:#808080; color:#c0c0c0; }
+body.win311 .cursor::after{ content:"_"; }
